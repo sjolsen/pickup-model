@@ -128,8 +128,6 @@ class Param(NamedTuple):
     name: str
     print_precision: int
     unit: str
-    guess: Any = 1
-    bounds: Tuple[Any, Any] = (0, +np.inf)
 
 class Model:
 
@@ -140,28 +138,12 @@ class Model:
             for p, v in zip(self.PARAMS, param))
 
 
-class WithRp(Model):
-
-    PARAMS = [
-        Param('Rl', 2, 'Ω', 8780, (8000, 10000)),
-        Param('Rp', 1, 'Ω', 1e6),
-        Param('L', 1, 'H', 2.7),
-        Param('C', 1, 'F', 150e-12),
-    ]
-
-    def model(self, f, Rl, Rp, L, C):
-        omega = 2*pi * f
-        zl = 1j * omega * L
-        zc = -1j / (omega * C)
-        zp = z_parallel(z_series(Rl, zl), zc, Rp)
-        return zp
-
 class WithoutRp(Model):
 
     PARAMS = [
-        Param('Rl', 2, 'Ω', 8780),
-        Param('L', 1, 'H', 2.7),
-        Param('C', 1, 'F', 150e-12),
+        Param('Rl', 2, 'Ω'),
+        Param('L', 1, 'H'),
+        Param('C', 1, 'F'),
     ]
 
     def model(self, f, Rl, L, C):
@@ -171,16 +153,54 @@ class WithoutRp(Model):
         zp = z_parallel(z_series(Rl, zl), zc)
         return zp
 
-class FitStrategy:
+    def analytical_approximation(self, data):
+        data = sorted(data, key=attrgetter('f_Hz'))
+        # Measure Rl close to DC
+        Rl = data[0].z.real
+        # Also measure L close to DC
+        dX = (data[1].z - data[0].z).imag
+        dω = (2*pi * (data[1].f_Hz - data[0].f_Hz))
+        L =  dX / dω
+        # Derive C from L using the self-resonant frequency
+        srf = max(data, key=lambda x: abs(x.z)).f_Hz
+        C = (2*pi * srf)**-2 / L
+        return (Rl, L, C)
 
-    def compute_p0(self, model):
-        return [p.guess for p in model.PARAMS]
+
+class WithRp(Model):
+
+    PARAMS = [
+        Param('Rl', 2, 'Ω'),
+        Param('Rp', 1, 'Ω'),
+        Param('L', 1, 'H'),
+        Param('C', 1, 'F'),
+    ]
+
+    def model(self, f, Rl, Rp, L, C):
+        omega = 2*pi * f
+        zl = 1j * omega * L
+        zc = -1j / (omega * C)
+        zp = z_parallel(z_series(Rl, zl), zc, Rp)
+        return zp
+
+    def analytical_approximation(self, data):
+        Rl, L, C = WithoutRp().analytical_approximation(data)
+        # TODO: A better approximation of Rp
+        return (Rl, 1.4e6, L, C)
+
+
+class FitStrategy:
 
     def compute_bounds(self, model):
         return [
-            tuple(p.bounds[0] for p in model.PARAMS),
-            tuple(p.bounds[1] for p in model.PARAMS),
+            tuple(0 for p in model.PARAMS),
+            tuple(+np.inf for p in model.PARAMS),
         ]
+
+class FitAnalytical(FitStrategy):
+
+    def fit(self, model, data):
+        return model.analytical_approximation(data)
 
 class FitResistance(FitStrategy):
 
@@ -192,7 +212,7 @@ class FitResistance(FitStrategy):
             return model.model(f, *param).real
 
         param, _ = curve_fit(fit_wrapper, f_Hz, z.real,
-                             p0=self.compute_p0(model),
+                             p0=model.analytical_approximation(data),
                              bounds=self.compute_bounds(model))
         return param
 
@@ -209,9 +229,10 @@ class FitRawData(FitStrategy):
 
         param, _ = curve_fit(fit_wrapper, f_Hz,
                              np.concatenate((vpp_mV, phi_us)),
-                             p0=self.compute_p0(model),
+                             p0=model.analytical_approximation(data),
                              bounds=self.compute_bounds(model))
         return param
+
 
 def run_model(model, strategy, color):
     param = strategy.fit(model, empirical_data)
@@ -221,8 +242,9 @@ def run_model(model, strategy, color):
     ])
     plot(model_data, color, model.describe(*param))
 
-run_model(WithRp(), FitRawData(), 'g')
+run_model(WithoutRp(), FitAnalytical(), 'm')
 run_model(WithoutRp(), FitRawData(), 'r')
+run_model(WithRp(), FitRawData(), 'g')
 
 y_rect.legend()
 # y_abs.legend()
