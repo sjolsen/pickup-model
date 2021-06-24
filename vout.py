@@ -124,13 +124,15 @@ plt.xlabel('f (Hz)')
 y_us = y_mV.twinx()
 y_mV.set_xscale('log')
 y_us.set_xscale('log')
-y_mV.set_ylabel('mVpp')
+y_mV.set_ylabel('dBV')
 y_us.set_ylabel('us')
 
 def plot(data, style, label):
     f_Hz, vpp_mV, phi_us = Datum.v_raw(data)
-    z = Datum.v_z(data)
-    y_mV.plot(f_Hz, vpp_mV, style[0], label=f'mVpp ({label})')
+    # Since the precision of the scope is relative to the magnitude of the
+    # measurement, should the fitting be done against dBV values?
+    vpp_dBV = 20 * np.log10(vpp_mV / 1000)
+    y_mV.plot(f_Hz, vpp_dBV, style[0], label=f'dBVpp ({label})')
     y_us.plot(f_Hz, phi_us, style[1], label=f'us ({label})')
 
 plot(empirical_data, ('b.', 'bx'), 'empirical')
