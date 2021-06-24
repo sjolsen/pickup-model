@@ -1,6 +1,6 @@
 from cmath import exp
 import math
-from math import pi
+from math import log, pi
 from operator import attrgetter
 from typing import Any, NamedTuple, Tuple
 
@@ -98,8 +98,9 @@ empirical_data = np.array([
 
 fig, y_mV = plt.subplots()
 plt.xlabel('f (Hz)')
-y_mV.set_xscale('log')
 y_us = y_mV.twinx()
+y_mV.set_xscale('log')
+y_us.set_xscale('log')
 y_mV.set_ylabel('mVpp')
 y_us.set_ylabel('us')
 
@@ -226,15 +227,16 @@ class FitRawData(FitStrategy):
         return param
 
 
-def run_model(model, strategy, color):
-    param = strategy.fit(model, empirical_data)
-    model_data = np.array([
-        ZDatum(f_Hz, model.model(f_Hz, *param))
-        for f_Hz in range(10, 11001, 10)
-    ])
+def run_model(data, model, strategy, color):
+    param = strategy.fit(model, data)
+    f_Hz = np.logspace(
+        start=log(min(Datum.v_f_Hz(data)), 10),
+        stop=log(max(Datum.v_f_Hz(data)), 10),
+        num=100)
+    model_data = np.vectorize(ZDatum)(f_Hz, model.model(f_Hz, *param))
     plot(model_data, (color + '-', color + '--'), model.describe(*param))
 
-run_model(WithRp(), FitRawData(), 'g')
+run_model(empirical_data, WithRp(), FitRawData(), 'g')
 
 y_mV.legend()
 y_us.legend()
