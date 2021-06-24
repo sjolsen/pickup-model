@@ -13,7 +13,10 @@ VIN_PP = 9.76
 R_SENSE = 1000
 
 class Datum:
-    pass
+
+    v_raw = np.vectorize(attrgetter('raw'))
+    v_f_Hz = np.vectorize(attrgetter('f_Hz'))
+    v_z = np.vectorize(attrgetter('z'))
 
 class RawDatum(Datum):
 
@@ -101,8 +104,8 @@ y_mV.set_ylabel('mVpp')
 y_us.set_ylabel('us')
 
 def plot(data, style, label):
-    f_Hz, vpp_mV, phi_us = np.vectorize(attrgetter('raw'))(data)
-    z = np.vectorize(attrgetter('z'))(data)
+    f_Hz, vpp_mV, phi_us = Datum.v_raw(data)
+    z = Datum.v_z(data)
     y_mV.plot(f_Hz, vpp_mV, style[0], label=f'mVpp ({label})')
     y_us.plot(f_Hz, phi_us, style[1], label=f'us ({label})')
 
@@ -195,8 +198,8 @@ class FitAnalytical(FitStrategy):
 class FitResistance(FitStrategy):
 
     def fit(self, model, data):
-        f_Hz = np.vectorize(attrgetter('f_Hz'))(data)
-        z = np.vectorize(attrgetter('z'))(data)
+        f_Hz = Datum.v_f_Hz(data)
+        z = Datum.v_z(data)
 
         def fit_wrapper(f, *param):
             return model.model(f, *param).real
@@ -209,12 +212,11 @@ class FitResistance(FitStrategy):
 class FitRawData(FitStrategy):
 
     def fit(self, model, data):
-        get_raw = np.vectorize(attrgetter('raw'))
-        f_Hz, vpp_mV, phi_us = get_raw(data)
+        f_Hz, vpp_mV, phi_us = Datum.v_raw(data)
 
         def fit_wrapper(f, *param):
             model_data = np.vectorize(ZDatum)(f, model.model(f, *param))
-            _, model_vpp, model_phi = get_raw(model_data)
+            _, model_vpp, model_phi = Datum.v_raw(model_data)
             return np.concatenate((model_vpp, model_phi))
 
         param, _ = curve_fit(fit_wrapper, f_Hz,
