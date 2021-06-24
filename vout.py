@@ -93,30 +93,20 @@ empirical_data = np.array([
     RawDatum(11000, 43.6, -20.4),
 ])
 
-fig, axes = plt.subplots(nrows=1, ncols=3)
+fig, y_mV = plt.subplots()
 plt.xlabel('f (Hz)')
-y_rect = axes[0]
-y_rect.set_ylabel('Z (Ohm)')
-y_abs = axes[1]
-y_phi = y_abs.twinx()
-y_abs.set_ylabel('|Z| (Ohm)')
-y_phi.set_ylabel('φ')
-y_mV = axes[2]
+y_mV.set_xscale('log')
 y_us = y_mV.twinx()
 y_mV.set_ylabel('mVpp')
 y_us.set_ylabel('us')
 
-def plot(data, color, label):
+def plot(data, style, label):
     f_Hz, vpp_mV, phi_us = np.vectorize(attrgetter('raw'))(data)
     z = np.vectorize(attrgetter('z'))(data)
-    y_rect.plot(f_Hz, z.real, color + '-', label=f'R ({label})')
-    y_rect.plot(f_Hz, z.imag, color + '--', label=f'X ({label})')
-    y_abs.plot(f_Hz, abs(z), color + '-', label=f'|Z| ({label})')
-    y_phi.plot(f_Hz, np.angle(z), color + '--', label=f'φ ({label})')
-    y_mV.plot(f_Hz, vpp_mV, color + '-', label=f'mVpp ({label})')
-    y_us.plot(f_Hz, phi_us, color + '--', label=f'us ({label})')
+    y_mV.plot(f_Hz, vpp_mV, style[0], label=f'mVpp ({label})')
+    y_us.plot(f_Hz, phi_us, style[1], label=f'us ({label})')
 
-plot(empirical_data, 'b', 'empirical')
+plot(empirical_data, ('b.', 'bx'), 'empirical')
 
 def z_series(*z):
     return sum(z)
@@ -240,15 +230,10 @@ def run_model(model, strategy, color):
         ZDatum(f_Hz, model.model(f_Hz, *param))
         for f_Hz in range(10, 11001, 10)
     ])
-    plot(model_data, color, model.describe(*param))
+    plot(model_data, (color + '-', color + '--'), model.describe(*param))
 
-run_model(WithoutRp(), FitAnalytical(), 'm')
-run_model(WithoutRp(), FitRawData(), 'r')
 run_model(WithRp(), FitRawData(), 'g')
 
-y_rect.legend()
-# y_abs.legend()
-# y_phi.legend()
-# y_mV.legend()
-# y_us.legend()
+y_mV.legend()
+y_us.legend()
 plt.show()
