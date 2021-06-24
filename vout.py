@@ -265,6 +265,26 @@ class FitRawData(FitStrategy):
                              bounds=self.compute_bounds(model))
         return param
 
+class FitPhaseMagnitude(FitStrategy):
+
+    def fit(self, model, data):
+        f_Hz, vpp_mV, phi_us = Datum.v_raw(data)
+        vpp_dBV = 20 * np.log10(vpp_mV / 1000)
+        phi = np.angle(Datum.v_z(data))
+
+        def fit_wrapper(f, *param):
+            model_data = np.vectorize(ZDatum)(f, model.model(f, *param))
+            _, model_vpp, model_phi = Datum.v_raw(model_data)
+            model_vpp_dBV = 20 * np.log10(model_vpp / 1000)
+            model_phi = np.angle(Datum.v_z(model_data))
+            return np.concatenate((model_vpp_dBV, model_phi))
+
+        param, _ = curve_fit(fit_wrapper, f_Hz,
+                             np.concatenate((vpp_dBV, phi)),
+                             p0=model.analytical_approximation(data),
+                             bounds=self.compute_bounds(model))
+        return param
+
 
 def run_model(data, model, strategy, color):
     param = strategy.fit(model, data)
@@ -275,7 +295,7 @@ def run_model(data, model, strategy, color):
     model_data = np.vectorize(ZDatum)(f_Hz, model.model(f_Hz, *param))
     plot(model_data, (color + '-', color + '--'), model.describe(*param))
 
-run_model(empirical_data, WithRp(), FitRawData(), 'g')
+run_model(empirical_data, WithRp(), FitPhaseMagnitude(), 'g')
 
 y_mV.legend()
 y_phi.legend()
