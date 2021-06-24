@@ -9,6 +9,9 @@ import numpy as np
 from scipy.optimize import curve_fit
 from si_prefix import si_format
 
+# VIN_PP is actually around 10.1 at 100 Hz and decreases slightly as frequency
+# increases. The below models treat the frequency generator as an ideal AC
+# voltage source.
 VIN_PP = 9.76
 R_SENSE = 1000
 
@@ -65,8 +68,17 @@ class ZDatum(Datum):
 # Not recorded on paper
 empirical_data = np.array([
     # RawDatum(10, 992, -1880),
-    RawDatum(100, 1000, 272.0),
+    RawDatum(100, 992, 290.0),
+    RawDatum(200, 944, 280.0),
+    RawDatum(300, 872, 266.0),
+    RawDatum(400, 796, 250.0),
+    RawDatum(500, 728, 236.0),
+    RawDatum(600, 660, 220.0),
+    RawDatum(700, 596, 206.0),
+    RawDatum(800, 548, 192.0),
+    RawDatum(900, 500, 180.0),
     RawDatum(1000, 464, 168.0),
+    RawDatum(1500, 330, 125.0),
     RawDatum(2000, 246, 99.0),
     RawDatum(3000, 152, 69.2),
     RawDatum(4000, 97.6, 52.0),
@@ -94,6 +106,17 @@ empirical_data = np.array([
     RawDatum(10000, 31.4, -21.2),
     RawDatum(10500, 37.6, -20.8),
     RawDatum(11000, 43.6, -20.4),
+    # np.logspace(4, 5, 10, endpoint=False) etc.
+    RawDatum(12600, 64.0, -18.4),
+    RawDatum(15800, 97.6, -15.3),
+    RawDatum(20000, 143, -12.2),
+    RawDatum(25100, 192, -9.76),
+    RawDatum(31600, 250, -7.72),
+    RawDatum(39800, 332, -6.12),
+    RawDatum(50100, 416, -4.74),
+    RawDatum(63100, 536, -3.74),
+    RawDatum(79400, 664, -2.96),
+    RawDatum(100000, 848, -2.33),
 ])
 
 fig, y_mV = plt.subplots()
