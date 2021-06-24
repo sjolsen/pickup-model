@@ -117,6 +117,16 @@ empirical_data = np.array([
     RawDatum(63100, 536, -3.74),
     RawDatum(79400, 664, -2.96),
     RawDatum(100000, 848, -2.33),
+    RawDatum(126000, 1050, -1.82),
+    RawDatum(158000, 1310, -1.43),
+    RawDatum(200000, 1680, -1.092),
+    RawDatum(251000, 2060, -0.844),
+    RawDatum(316000, 2540, -0.644),
+    RawDatum(398000, 2900, -0.492),
+    RawDatum(501000, 3620, -0.356),
+    RawDatum(631000, 4320, -0.256),
+    RawDatum(794000, 5000, -0.184),
+    RawDatum(1000000, 5640, -0.130),
 ])
 
 fig, y_mV = plt.subplots()
@@ -130,7 +140,10 @@ y_us.set_ylabel('us')
 def plot(data, style, label):
     f_Hz, vpp_mV, phi_us = Datum.v_raw(data)
     # Since the precision of the scope is relative to the magnitude of the
-    # measurement, should the fitting be done against dBV values?
+    # measurement, should the fitting be done against dBV values? Similarly, the
+    # relationship between time-domain phase delay and phase angle is
+    # frequency-dependent -- a difference of 1 us makes a much bigger difference
+    # at 100 kHz than at 1 kHz.
     vpp_dBV = 20 * np.log10(vpp_mV / 1000)
     y_mV.plot(f_Hz, vpp_dBV, style[0], label=f'dBVpp ({label})')
     y_us.plot(f_Hz, phi_us, style[1], label=f'us ({label})')
