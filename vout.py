@@ -254,10 +254,10 @@ class FitRawData(FitStrategy):
 
 def run_model(data, model, strategy, color):
     param = strategy.fit(model, data)
-    f_Hz = np.logspace(
-        start=log(min(Datum.v_f_Hz(data)), 10),
-        stop=log(max(Datum.v_f_Hz(data)), 10),
-        num=100)
+    start = log(min(Datum.v_f_Hz(data)), 10)
+    stop = log(max(Datum.v_f_Hz(data)), 10)
+    decades = stop - start
+    f_Hz = np.logspace(start, stop, num=math.ceil(200 * decades))
     model_data = np.vectorize(ZDatum)(f_Hz, model.model(f_Hz, *param))
     plot(model_data, (color + '-', color + '--'), model.describe(*param))
 
